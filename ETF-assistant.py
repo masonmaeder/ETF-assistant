@@ -118,17 +118,57 @@ def chat_with_assistant():
     conversation_html = ""
     for message in session["conversation"]:
         if message["role"] == "user":
-            conversation_html += f'<div style="color: blue;">{
+            conversation_html += f'<div class="user-message">{
                 message["content"]}</div>'
         else:
-            conversation_html += f'<div style="color: green;">{
+            conversation_html += f'<div class="assistant-message">{
                 message["content"]}</div>'
             if message["citations"]:
-                conversation_html += f'<div>Learn more:<br>{
+                conversation_html += f'<div class="citations">Learn more:<br>{
                     message["citations"]}</div>'
 
     return render_template_string("""
         <html>
+            <head>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 20px;
+                    }
+                    .user-message {
+                        color: blue;
+                        margin-bottom: 10px;
+                    }
+                    .assistant-message {
+                        color: green;
+                        margin-bottom: 10px;
+                    }
+                    .citations {
+                        margin-left: 20px;
+                        font-size: 0.9em;
+                        color: gray;
+                    }
+                    form {
+                        margin-top: 20px;
+                    }
+                    input[type="text"] {
+                        width: 100%;
+                        padding: 10px;
+                        margin: 10px 0;
+                        box-sizing: border-box;
+                    }
+                    input[type="submit"] {
+                        background-color: #4CAF50;
+                        color: white;
+                        padding: 10px 20px;
+                        border: none;
+                        cursor: pointer;
+                    }
+                    input[type="submit"]:hover {
+                        background-color: #45a049;
+                    }
+                </style>
+            </head>
             <body>
                 <div>
                     {{ conversation_html|safe }}
@@ -144,4 +184,4 @@ def chat_with_assistant():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
