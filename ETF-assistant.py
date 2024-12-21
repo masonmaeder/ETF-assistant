@@ -140,11 +140,21 @@ def chat_with_assistant():
                 .user-message {
                     color: blue;
                     margin-bottom: 10px;
+                    background-color: #e1f5fe;
+                    padding: 10px;
+                    border-radius: 10px;
+                    max-width: 60%;
+                    text-align: left;
                 }
 
                 .assistant-message {
                     color: green;
                     margin-bottom: 10px;
+                    background-color: #e8f5e9;
+                    padding: 10px;
+                    border-radius: 10px;
+                    max-width: 60%;
+                    text-align: left;
                 }
 
                 .citations {
@@ -178,7 +188,6 @@ def chat_with_assistant():
 
                 .logo {
                     text-align: center;
-                    margin-bottom: 20px;
                 }
             </style>
         </head>
