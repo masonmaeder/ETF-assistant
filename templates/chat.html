@@ -59,6 +59,11 @@
         .logo {
             text-align: center;
         }
+
+        .loading {
+            display: none;
+            margin-left: 10px;
+        }
     </style>
 </head>
 
@@ -73,7 +78,13 @@
         <label for="user_input">How can I help you?</label><br>
         <input type="text" id="user_input" name="user_input"><br>
         <input type="submit" value="Submit">
+        <img class="loading" src="assets/loading.gif" alt="Loading">
     </form>
+    <script>
+        document.querySelector('form').addEventListener('submit', function (e) {
+            document.querySelector('.loading').style.display = 'inline';
+        });
+    </script>
 </body>
 
 </html>
