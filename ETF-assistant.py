@@ -2,7 +2,7 @@ import markdown
 import os
 import json
 from openai import OpenAI
-from flask import Flask, request, render_template_string, session
+from flask import Flask, request, render_template, session
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "your_secret_key"
@@ -127,87 +127,7 @@ def chat_with_assistant():
                 conversation_html += f'<div class="citations">Learn more:<br>{
                     message["citations"]}</div>'
 
-    return render_template_string("""
-        <html>
-
-        <head>
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    margin: 20px;
-                }
-
-                .user-message {
-                    color: blue;
-                    margin-bottom: 10px;
-                    background-color: #e1f5fe;
-                    padding: 10px;
-                    border-radius: 10px;
-                    max-width: 60%;
-                    text-align: left;
-                }
-
-                .assistant-message {
-                    color: green;
-                    margin-bottom: 10px;
-                    background-color: #e8f5e9;
-                    padding: 10px;
-                    border-radius: 10px;
-                    max-width: 60%;
-                    text-align: left;
-                }
-
-                .citations {
-                    margin-left: 20px;
-                    font-size: 0.9em;
-                    color: gray;
-                }
-
-                form {
-                    margin-top: 20px;
-                }
-
-                input[type="text"] {
-                    width: 100%;
-                    padding: 10px;
-                    margin: 10px 0;
-                    box-sizing: border-box;
-                }
-
-                input[type="submit"] {
-                    background-color: #4CAF50;
-                    color: white;
-                    padding: 10px 20px;
-                    border: none;
-                    cursor: pointer;
-                }
-
-                input[type="submit"]:hover {
-                    background-color: #45a049;
-                }
-
-                .logo {
-                    text-align: center;
-                }
-            </style>
-        </head>
-
-        <body>
-            <div class="logo">
-                <img src="https://etfonline.wi.gov/images/detf_log.jpg" alt="Centered Image">
-            </div>
-            <div>
-                {{ conversation_html|safe }}
-            </div>
-            <form method="post">
-                <label for="user_input">How can I help you?</label><br>
-                <input type="text" id="user_input" name="user_input"><br>
-                <input type="submit" value="Submit">
-            </form>
-        </body>
-
-        </html>
-    """, conversation_html=conversation_html)
+    return render_template("chat.html", conversation_html=conversation_html)
 
 
 if __name__ == "__main__":
