@@ -102,7 +102,7 @@ def chat_with_assistant():
         print(f"{bcolors.OKGREEN}{
               message_content.value}{bcolors.ENDC}")
         if citations:
-            print("Citations:")
+            print("Learn more:")
             print("\n".join(citations))
 
 
