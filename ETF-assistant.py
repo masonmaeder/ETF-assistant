@@ -2,9 +2,10 @@ import markdown
 import os
 import json
 from openai import OpenAI
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template_string, session
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = "your_secret_key"
 
 
 class bcolors:
@@ -64,13 +65,17 @@ message_files = [client.files.create(
     file=open(path, "rb"), purpose="assistants") for path in file_paths]
 
 
-app = Flask(__name__)
-
-
 @app.route("/", methods=["GET", "POST"])
 def chat_with_assistant():
+    # Clear the session at the beginning of each request
+    session.clear()
+
+    if "conversation" not in session:
+        session["conversation"] = []
+
     if request.method == "POST":
         user_input = request.form["user_input"]
+        session["conversation"].append({"role": "user", "content": user_input})
 
         # Create a thread and attach the files to the message
         thread = client.beta.threads.create(
@@ -107,30 +112,35 @@ def chat_with_assistant():
         html_content = markdown.markdown(message_content.value)
         citations_html = "<br>".join(citations)
 
-        return render_template_string("""
-            <html>
-                <body>
-                    <div style="color: green;">
-                        {{ html_content|safe }}
-                    </div>
-                    {% if citations %}
-                    <div>
-                        <h3>Learn more:</h3>
-                        <p>{{ citations_html|safe }}</p>
-                    </div>
-                    {% endif %}
-                    <a href="/">Back</a>
-                </body>
-            </html>
-        """, html_content=html_content, citations_html=citations_html)
+        session["conversation"].append(
+            {"role": "assistant", "content": html_content, "citations": citations_html})
 
-    return '''
-        <form method="post">
-            <label for="user_input">Enter your message:</label><br>
-            <input type="text" id="user_input" name="user_input"><br>
-            <input type="submit" value="Submit">
-        </form>
-    '''
+    conversation_html = ""
+    for message in session["conversation"]:
+        if message["role"] == "user":
+            conversation_html += f'<div style="color: blue;">{
+                message["content"]}</div>'
+        else:
+            conversation_html += f'<div style="color: green;">{
+                message["content"]}</div>'
+            if message["citations"]:
+                conversation_html += f'<div>Learn more:<br>{
+                    message["citations"]}</div>'
+
+    return render_template_string("""
+        <html>
+            <body>
+                <div>
+                    {{ conversation_html|safe }}
+                </div>
+                <form method="post">
+                    <label for="user_input">Enter your message:</label><br>
+                    <input type="text" id="user_input" name="user_input"><br>
+                    <input type="submit" value="Submit">
+                </form>
+            </body>
+        </html>
+    """, conversation_html=conversation_html)
 
 
 if __name__ == "__main__":
