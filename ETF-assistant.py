@@ -1,3 +1,5 @@
+import os
+import json
 from openai import OpenAI
 
 with open('.zshrc', 'r') as f:
@@ -8,15 +10,21 @@ client = OpenAI(api_key=api_key)
 
 assistant = client.beta.assistants.create(
     name="Employee Trust Funds Customer Service Assistant",
-    instructions="You are an expert ETF employee. Use you knowledge base to answer questions from customers.",
+    instructions="You are an expert ETF employee. Use your knowledge base to answer questions from customers.",
     model="gpt-4o-mini",
     tools=[{"type": "file_search"}],
 )
 
 vector_store = client.beta.vector_stores.create(name="ETF Documents")
 
-# Ready the files for upload to OpenAI
-file_paths = ["etf/et4118.pdf", "etf/et4121.pdf", "etf/et4132.pdf"]
+# List all files in the etf/ directory
+file_paths = [os.path.join("etf", file)
+              for file in os.listdir("etf")]
+
+# Initialize message_files
+message_files = []
+
+# Upload all files
 file_streams = [open(path, "rb") for path in file_paths]
 
 # Use the upload and poll SDK helper to upload the files, add them to the vector store,
@@ -31,30 +39,28 @@ print(file_batch.file_counts)
 
 assistant = client.beta.assistants.update(
     assistant_id=assistant.id,
-    tool_resources={"file_search": {"vector_store_ids": [vector_store.id]}},
+    tool_resources={"file_search": {"vector_store_ids": [vector_store.id]}}
 )
 
-# Upload the user provided file to OpenAI
-message_file = client.files.create(
-    file=open("etf/et4121.pdf", "rb"), purpose="assistants"
-)
+# Upload the user provided files to OpenAI
+message_files = [client.files.create(
+    file=open(path, "rb"), purpose="assistants") for path in file_paths]
 
-# Create a thread and attach the file to the message
+# Create a thread and attach the files to the message
 thread = client.beta.threads.create(
     messages=[
         {
             "role": "user",
-            "content": "What is the cost of buying service?",
-            # Attach the new file to the message.
+            "content": "When can I reenroll in health insurance with sick leave?",
+            # Attach the new files to the message.
             "attachments": [
-                {"file_id": message_file.id, "tools": [
-                    {"type": "file_search"}]}
+                {"file_id": message_file.id, "tools": [{"type": "file_search"}]} for message_file in message_files
             ],
         }
     ]
 )
 
-# The thread now has a vector store with that file in its tool resources.
+# The thread now has a vector store with those files in its tool resources.
 print(thread.tool_resources.file_search)
 
 run = client.beta.threads.runs.create_and_poll(
@@ -74,5 +80,20 @@ for index, annotation in enumerate(annotations):
         cited_file = client.files.retrieve(file_citation.file_id)
         citations.append(f"[{index}] {cited_file.filename}")
 
+print("===================")
 print(message_content.value)
+print("=== Citations ===")
 print("\n".join(citations))
+print("=== Annotations ===")
+
+# Retrieve the vector store
+vector_store = client.beta.vector_stores.retrieve(
+    vector_store_id=vector_store.id)
+
+# List the files in the vector store
+files = client.beta.vector_stores.files.list(vector_store_id=vector_store.id)
+
+# Print the file details
+print("Files in the vector store:")
+for file in files:
+    print(f"File ID: {file.id}")
