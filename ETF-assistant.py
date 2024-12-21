@@ -1,6 +1,10 @@
+import markdown
 import os
 import json
 from openai import OpenAI
+from flask import Flask, request, render_template_string
+
+app = Flask(__name__)
 
 
 class bcolors:
@@ -60,12 +64,13 @@ message_files = [client.files.create(
     file=open(path, "rb"), purpose="assistants") for path in file_paths]
 
 
+app = Flask(__name__)
+
+
+@app.route("/", methods=["GET", "POST"])
 def chat_with_assistant():
-    print("You can start chatting with the assistant. Type 'exit' to end the conversation.")
-    while True:
-        user_input = input("$ ")
-        if user_input.lower() == 'exit':
-            break
+    if request.method == "POST":
+        user_input = request.form["user_input"]
 
         # Create a thread and attach the files to the message
         thread = client.beta.threads.create(
@@ -99,12 +104,34 @@ def chat_with_assistant():
                 cited_file = client.files.retrieve(file_citation.file_id)
                 citations.append(f"[{index}] {cited_file.filename}")
 
-        print(f"{bcolors.OKGREEN}{
-              message_content.value}{bcolors.ENDC}")
-        if citations:
-            print("Learn more:")
-            print("\n".join(citations))
+        html_content = markdown.markdown(message_content.value)
+        citations_html = "<br>".join(citations)
+
+        return render_template_string("""
+            <html>
+                <body>
+                    <div style="color: green;">
+                        {{ html_content|safe }}
+                    </div>
+                    {% if citations %}
+                    <div>
+                        <h3>Learn more:</h3>
+                        <p>{{ citations_html|safe }}</p>
+                    </div>
+                    {% endif %}
+                    <a href="/">Back</a>
+                </body>
+            </html>
+        """, html_content=html_content, citations_html=citations_html)
+
+    return '''
+        <form method="post">
+            <label for="user_input">Enter your message:</label><br>
+            <input type="text" id="user_input" name="user_input"><br>
+            <input type="submit" value="Submit">
+        </form>
+    '''
 
 
 if __name__ == "__main__":
-    chat_with_assistant()
+    app.run(debug=True)
