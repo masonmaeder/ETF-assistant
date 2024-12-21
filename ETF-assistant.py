@@ -2,6 +2,19 @@ import os
 import json
 from openai import OpenAI
 
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 with open('.zshrc', 'r') as f:
     api_key = f.read().strip()
     print("API key loaded successfully.")
@@ -46,54 +59,52 @@ assistant = client.beta.assistants.update(
 message_files = [client.files.create(
     file=open(path, "rb"), purpose="assistants") for path in file_paths]
 
-# Create a thread and attach the files to the message
-thread = client.beta.threads.create(
-    messages=[
-        {
-            "role": "user",
-            "content": "When can I reenroll in health insurance with sick leave?",
-            # Attach the new files to the message.
-            "attachments": [
-                {"file_id": message_file.id, "tools": [{"type": "file_search"}]} for message_file in message_files
-            ],
-        }
-    ]
-)
 
-# The thread now has a vector store with those files in its tool resources.
-print(thread.tool_resources.file_search)
+def chat_with_assistant():
+    print("You can start chatting with the assistant. Type 'exit' to end the conversation.")
+    while True:
+        user_input = input("$ ")
+        if user_input.lower() == 'exit':
+            break
 
-run = client.beta.threads.runs.create_and_poll(
-    thread_id=thread.id, assistant_id=assistant.id
-)
+        # Create a thread and attach the files to the message
+        thread = client.beta.threads.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": user_input,
+                    # Attach the new files to the message.
+                    "attachments": [
+                        {"file_id": message_file.id, "tools": [{"type": "file_search"}]} for message_file in message_files
+                    ],
+                }
+            ]
+        )
 
-messages = list(client.beta.threads.messages.list(
-    thread_id=thread.id, run_id=run.id))
+        # The thread now has a vector store with those files in its tool resources.
+        run = client.beta.threads.runs.create_and_poll(
+            thread_id=thread.id, assistant_id=assistant.id
+        )
 
-message_content = messages[0].content[0].text
-annotations = message_content.annotations
-citations = []
-for index, annotation in enumerate(annotations):
-    message_content.value = message_content.value.replace(
-        annotation.text, f"[{index}]")
-    if file_citation := getattr(annotation, "file_citation", None):
-        cited_file = client.files.retrieve(file_citation.file_id)
-        citations.append(f"[{index}] {cited_file.filename}")
+        messages = list(client.beta.threads.messages.list(
+            thread_id=thread.id, run_id=run.id))
 
-print("===================")
-print(message_content.value)
-print("=== Citations ===")
-print("\n".join(citations))
-print("=== Annotations ===")
+        message_content = messages[0].content[0].text
+        annotations = message_content.annotations
+        citations = []
+        for index, annotation in enumerate(annotations):
+            message_content.value = message_content.value.replace(
+                annotation.text, f"[{index}]")
+            if file_citation := getattr(annotation, "file_citation", None):
+                cited_file = client.files.retrieve(file_citation.file_id)
+                citations.append(f"[{index}] {cited_file.filename}")
 
-# Retrieve the vector store
-vector_store = client.beta.vector_stores.retrieve(
-    vector_store_id=vector_store.id)
+        print(f"{bcolors.OKGREEN}{
+              message_content.value}{bcolors.ENDC}")
+        if citations:
+            print("Citations:")
+            print("\n".join(citations))
 
-# List the files in the vector store
-files = client.beta.vector_stores.files.list(vector_store_id=vector_store.id)
 
-# Print the file details
-print("Files in the vector store:")
-for file in files:
-    print(f"File ID: {file.id}")
+if __name__ == "__main__":
+    chat_with_assistant()
